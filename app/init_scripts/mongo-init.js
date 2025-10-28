@@ -1,4 +1,5 @@
-db = db.getSiblingDB('modify_me_accordignly');
+// Switch to the tech_challenge database
+db = db.getSiblingDB(process.env.MONGO_INITDB_DATABASE);
 db.createCollection('visits');
 db.visits.insertMany([
   {
