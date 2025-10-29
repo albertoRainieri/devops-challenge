@@ -42,7 +42,8 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
-      tags: ["tech-challenge-app:1.0.1"]
+      target: production
+      tags: ["tech-challenge-app:prod"]
     container_name: tech-challenge-app
     restart: unless-stopped
     ports:
@@ -76,9 +77,15 @@ services:
 
   # NestJS Application Service
   app-test:
-    image: tech-challenge-app:1.0.0
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      target: test
+      tags: ["tech-challenge-app:test"]
     container_name: tech-challenge-app-test
-    restart: unless-stopped
+    depends_on:
+      - app
+    restart: no
     ports:
       - "3001:3000"
     environment:
@@ -89,8 +96,6 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
       #MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
       #MONGODB_URI: mongodb://admin:password123@mongodb:27017/tech_challenge?authSource=admin
-    depends_on:
-      - mongodb
     volumes:
       - ./app/test:/app/test:ro
     networks:
