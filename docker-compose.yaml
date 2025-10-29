@@ -6,15 +6,34 @@ services:
     image: mongo:7.0
     container_name: tech-challenge-mongodb
     restart: unless-stopped
-    # ports:
-    #   - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     volumes:
       - mongodb_data:/data/db
-      - ./app/init_scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      #- ./app/init_scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - app-network
+
+  mongo-init:
+    image: mongo:7.0
+    container_name: tech-challenge-mongo-init
+    depends_on:
+      - mongodb
+    volumes:
+      - ./app/init_scripts:/scripts
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    command:
+      [
+        "mongosh",
+        "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin",
+        "/scripts/mongo-init-v2.js",
+      ]
+    restart: "no" # run once and stop
     networks:
       - app-network
 
@@ -23,6 +42,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+      tags: ["tech-challenge-app:1.0.1"]
     container_name: tech-challenge-app
     restart: unless-stopped
     ports:
