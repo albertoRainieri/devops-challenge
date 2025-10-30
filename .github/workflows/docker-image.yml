@@ -7,6 +7,10 @@ on:
     branches: ["main", "develop"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   # SAST: Static Application Security Testing
   njsscan:
@@ -45,10 +49,7 @@ jobs:
           context: ./app
           file: ./app/Dockerfile
           target: production
-          push: false
           tags: tech-challenge-app:production
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
 
