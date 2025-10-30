@@ -35,7 +35,7 @@ jobs:
   # Build Docker image
   build:
     name: Build Production Image
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4.2.2
@@ -50,6 +50,7 @@ jobs:
           file: ./app/Dockerfile
           target: production
           tags: tech-challenge-app:production
+          push: true
           build-args: |
             NODE_ENV=production
 
