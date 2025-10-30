@@ -38,14 +38,14 @@ jobs:
     - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: ${{ steps.nodejsscan-scan.outputs.sarif }}
+        sarif_file: sast-analysis.sarif
 
     # Upload SARIF file as an Artifact to download and view
     - name: Upload SARIF as an Artifact
       uses: actions/upload-artifact@v5
       with:
         name: sarif-file
-        path: ${{ steps.nodejsscan-scan.outputs.sarif }}
+        path: sast-analysis.sarif
 
   # Build Docker image
   build:
