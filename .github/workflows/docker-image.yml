@@ -17,20 +17,35 @@ jobs:
     runs-on: ubuntu-latest
     name: njsscan code scanning
     steps:
+
+    # Checkout the code
     - name: Checkout the code
       uses: actions/checkout@v4.2.2
+
+    # Setup Python
     - uses: actions/setup-python@v5.3.0
       with:
         python-version: '3.12'
-    - name: nodejsscan scan
+
+    # Code Static Analysis with njsscan
+    - name: nodejsscan-scan
       id: njsscan
       uses: ajinabraham/njsscan-action@master
       with:
         args: '. --sarif --output results.sarif || true'
-    - name: Upload njsscan report
+
+    # Upload SARIF file to GitHub Code Scanning Alerts
+    - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: results.sarif
+        sarif_file: ${{ steps.nodejsscan-scan.outputs.sarif }}
+
+    # Upload SARIF file as an Artifact to download and view
+    - name: Upload SARIF as an Artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: sarif-file
+        path: ${{ steps.nodejsscan-scan.outputs.sarif }}
 
   # Build Docker image
   build:
