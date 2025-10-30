@@ -32,7 +32,7 @@ jobs:
       id: njsscan
       uses: ajinabraham/njsscan-action@master
       with:
-        args: '. --sarif --output results.sarif || true'
+        args: '. --sarif --output sast-analysis.sarif || true'
 
     # Upload SARIF file to GitHub Code Scanning Alerts
     - name: Upload SARIF to GitHub
