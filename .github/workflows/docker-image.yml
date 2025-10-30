@@ -34,17 +34,11 @@ jobs:
       with:
         args: '. --sarif --output sast-analysis.sarif || true'
 
-    # Upload SARIF file to GitHub Code Scanning Alerts
-    - name: Upload SARIF to GitHub
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: sast-analysis.sarif
-
     # Upload SARIF file as an Artifact to download and view
     - name: Upload SARIF as an Artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v4
       with:
-        name: sarif-file
+        name: sast-analysis.sarif
         path: sast-analysis.sarif
 
   # Build Docker image
@@ -80,12 +74,12 @@ jobs:
           severity: 'CRITICAL,HIGH'
           #exit-code: '1' # Fail build on critical/high vulnerabilities
 
-      - name: Upload image scan results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+      # Upload SARIF file as an Artifact to download and view
+      - name: Upload Trivy SARIF as an Artifact
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: 'trivy-image.sarif'
-          category: 'container-scan'
+          name: trivy-image.sarif
+          path: trivy-image.sarif
 
       # - name: Run Trivy with table format for image report
       #   uses: aquasecurity/trivy-action@master
