@@ -137,43 +137,54 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    
+
     strategy:
       fail-fast: false
       matrix:
         language: ['javascript-typescript']
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           # Optional: Add custom config
           # config-file: ./.github/codeql/codeql-config.yml
-      
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+        id: analyze
         with:
           category: "/language:javascript-typescript"
-          sarif_file: codeql-results.sarif
+        # Auto-uploads to GitHub Security tab with security-events: write
 
-      - name: Upload CodeQL SARIF as an Artifact
+      # Optional: Upload SARIF as artifact for manual review
+      # Note: Results are automatically uploaded to GitHub Security tab above
+      - name: Upload CodeQL SARIF as Artifact (optional)
         uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
         with:
-          name: codeql-results.sarif
-          path: codeql-results.sarif
+          name: codeql-results
+          path: |
+            **/*.sarif
+            codeql-database/**/*.sarif
+          retention-days: 7
 
 
   build:
     name: Build Production Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout the code
         uses: actions/checkout@v5
-        
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -199,11 +210,19 @@ jobs:
           format: 'sarif'
           output: 'trivy-image.sarif'
           severity: 'CRITICAL,HIGH'
-          #exit-code: '1'
+          exit-code: '1'
 
-      # Upload SARIF file as an Artifact to download and view
-      - name: Upload Trivy SARIF as an Artifact
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: container-scan
+
+      - name: Upload Trivy SARIF as Artifact (optional)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: trivy-image.sarif
           path: trivy-image.sarif
+          retention-days: 7
