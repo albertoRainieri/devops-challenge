@@ -161,19 +161,6 @@ jobs:
           category: "/language:javascript-typescript"
         # Auto-uploads to GitHub Security tab with security-events: write
 
-      # Optional: Upload SARIF as artifact for manual review
-      # Note: Results are automatically uploaded to GitHub Security tab above
-      - name: Upload CodeQL SARIF as Artifact (optional)
-        uses: actions/upload-artifact@v4
-        if: always()
-        continue-on-error: true
-        with:
-          name: codeql-results
-          path: |
-            **/*.sarif
-            codeql-database/**/*.sarif
-          retention-days: 7
-
 
   build:
     name: Build Production Image
