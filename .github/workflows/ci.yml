@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Continuous Integration
 
 on:
   push:
@@ -158,6 +158,13 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
+          output: codeql-results.sarif
+
+      - name: Upload CodeQL SARIF as an Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results.sarif
+          path: codeql-results.sarif
 
 
   build:
