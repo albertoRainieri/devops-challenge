@@ -244,7 +244,10 @@ jobs:
           platforms: linux/amd64
           build-args: |
             NODE_ENV=test
-      
+
+      - name: Create Docker network
+        run: docker network create test-network
+
       - name: Start MongoDB
         run: |
           docker run -d \
@@ -272,6 +275,6 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker stop tech-challenge-mongodb || true
-          docker rm tech-challenge-mongodb || true
-          docker network rm test-network || true
+          docker stop mongodb || true
+          docker rm mongodb || true
+          docker network rm test-network 2>/dev/null || true
