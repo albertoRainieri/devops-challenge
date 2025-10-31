@@ -217,7 +217,7 @@ jobs:
   # E2E Tests
   e2e-tests:
     runs-on: ubuntu-latest
-    
+    #needs: build
     steps:
       - uses: actions/checkout@v3
       
@@ -227,14 +227,25 @@ jobs:
           echo "MONGO_INITDB_ROOT_PASSWORD=test" >> $GITHUB_ENV
           echo "MONGO_INITDB_DATABASE=tech_challenge_test" >> $GITHUB_ENV
       
-      - name: Build test Docker image
-        run: |
-          docker build -t tech-challenge-app:1.0.0 -f ./app/Dockerfile.test ./app
+      - name: Build production test Docker image
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: ./app
+          file: ./app/Dockerfile
+          target: test
+          tags: tech-challenge-app:test
+          push: false
+          load: true
+          platforms: linux/amd64
+          build-args: |
+            NODE_ENV=test
       
       - name: Start MongoDB
         run: |
           docker run -d \
-            --name tech-challenge-mongodb \
+            --name mongodb \
             --network test-network \
             -e MONGO_INITDB_ROOT_USERNAME=test \
             -e MONGO_INITDB_ROOT_PASSWORD=test \
@@ -252,7 +263,7 @@ jobs:
             -e MONGO_INITDB_ROOT_USERNAME=test \
             -e MONGO_INITDB_ROOT_PASSWORD=test \
             -e MONGO_INITDB_DATABASE=tech_challenge_test \
-            tech-challenge-app:1.0.0 \
+            tech-challenge-app:test \
             pnpm test:e2e
       
       - name: Cleanup
