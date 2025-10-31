@@ -1,0 +1,31 @@
+1. Containerization
+Create an efficient Dockerfile for the NestJS application.
+Focus on multi-stage builds and best practices for small, secure images.
+
+2. Database Initialization
+A database initialization file (e.g., init-mongo.js) is present in the repository.
+Integrate a mechanism (e.g., a dedicated init container, script, or Docker entrypoint) to automatically load this file and prepare the MongoDB schema before the main application starts.
+
+3. Local Orchestration
+Create a Docker Compose setup for local development and demonstration.
+The setup must include: - The NestJS application container - A MongoDB container - The database initialization step (Task 2)
+
+4. Automation (CI/CD)
+Implement a basic CI/CD pipeline (using GitHub Actions, GitLab CI, etc.).
+The pipeline must, at minimum: - Build and - Test the application image successfully.
+
+5. Security Fundamentals
+Implement solutions to secure the application environment, including (but not limited to): - Managing secrets (e.g., in Docker Compose) - Ensuring secure container configuration (non-root users, least privileges)
+
+6. Infrastructure as Code (IaC)
+Create Terraform files to provision the necessary cloud infrastructure to deploy the Kubernetes cluster (e.g., networking, compute resources).
+Choose any major cloud provider (AWS, GCP, Azure).
+
+7. Kubernetes Manifests
+Create comprehensive Kubernetes manifest files (Deployments, Services, ConfigMaps, Secrets, etc.) for the application and its database (if self-hosted). Feel free to modify the application code if it supports your DevOps goals. Apply Kubernetes best practices, including: - Resource Limits/Requests - Readiness/Liveness Probes
+
+8. Monitoring
+Implement a Monitoring Solution (e.g., integrating Prometheus/Grafana/ELK + APM) to track key application metrics such as: - Request latency - Error rates - Container health
+
+Include an example dashboard setup or configuration.
+

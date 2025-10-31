@@ -1,0 +1,23 @@
+4. Automation (CI/CD)
+Implement a basic CI/CD pipeline (using GitHub Actions, GitLab CI, etc.).
+The pipeline must, at minimum: - Build and - Test the application image successfully.
+
+
+5. Security Fundamentals
+Implement solutions to secure the application environment, including (but not limited to): - Managing secrets (e.g., in Docker Compose) - Ensuring secure container configuration (non-root users, least privileges)
+
+
+--> improve local orchestration by setting secrets differently in docker-compose
+
+--> github Actions
+- checkout; SAST; build; SCA (docker scout); Test; Deploy su AWS
+
+- checkout && SAST && docker build && SCA
+- docker test
+- docker deploy
+
+--> deploy k8s cluster in AWS
+
+--> deploy k8s manifests
+
+--> implement Monitoring Solution for tracking key application metrics such as: - Request latency - Error rates - Container health
