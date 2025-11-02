@@ -173,10 +173,6 @@ apt-get upgrade -y
 # Install HAProxy
 apt-get install -y haproxy awscli
 
-# Create directory for HAProxy configuration script
-mkdir -p /opt
-
-
 
 # Wait for IAM instance profile credentials to be available
 echo "Waiting for IAM role credentials to be available..."
