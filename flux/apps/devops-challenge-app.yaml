@@ -4,7 +4,7 @@ metadata:
   name: devops-challenge-app
   namespace: production
 spec:
-  interval: 5m
+  interval: 1m
   chart:
     spec:
       chart: ./k8s-manifests/devops-challenge-app
