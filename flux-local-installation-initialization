@@ -1,0 +1,12 @@
+
+brew install fluxcd/tap/flux
+
+export GITHUB_TOKEN=<your-github-personal-access-token>
+
+flux --insecure-skip-tls-verify bootstrap github  --owner=albertorainieri \
+  --repository=albertorainieri/devops-challenge \
+  --branch=main \
+  --path=./flux \
+  --personal \
+  --token-auth
+
