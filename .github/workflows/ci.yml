@@ -230,7 +230,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-
       - name: Tag image for Docker Hub
         if: success()
         run: docker tag tech-challenge-app:production albertorainieri/devops-challenge:production
@@ -245,12 +244,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Set environment variables
-        run: |
-          echo "MONGO_INITDB_ROOT_USERNAME=test" >> $GITHUB_ENV
-          echo "MONGO_INITDB_ROOT_PASSWORD=test" >> $GITHUB_ENV
-          echo "MONGO_INITDB_DATABASE=tech_challenge_test" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -278,9 +271,10 @@ jobs:
           docker run -d \
             --name mongodb \
             --network test-network \
-            -e MONGO_INITDB_ROOT_USERNAME=test \
-            -e MONGO_INITDB_ROOT_PASSWORD=test \
-            -e MONGO_INITDB_DATABASE=tech_challenge_test \
+            -e MONGO_INSTANCE_NAME=mongodb \
+            -e MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_INITDB_ROOT_USERNAME }} \
+            -e MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_INITDB_ROOT_PASSWORD }} \
+            -e MONGO_INITDB_DATABASE=${{ secrets.MONGO_INITDB_DATABASE }} \
             mongo:7.0
       
       - name: Wait for MongoDB to be ready
@@ -291,9 +285,10 @@ jobs:
         run: |
           docker run --rm \
             --network test-network \
-            -e MONGO_INITDB_ROOT_USERNAME=test \
-            -e MONGO_INITDB_ROOT_PASSWORD=test \
-            -e MONGO_INITDB_DATABASE=tech_challenge_test \
+            -e MONGO_INSTANCE_NAME=mongodb \
+            -e MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_INITDB_ROOT_USERNAME }} \
+            -e MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_INITDB_ROOT_PASSWORD }} \
+            -e MONGO_INITDB_DATABASE=${{ secrets.MONGO_INITDB_DATABASE }} \
             tech-challenge-app:test \
             pnpm test:e2e
       

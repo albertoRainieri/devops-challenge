@@ -6,7 +6,7 @@ import { VisitsModule } from './visits/visits.module';
 
 // Function to build MongoDB URI
 const buildMongoUri = (configService: ConfigService): string => {
-  const mongoUri = `mongodb://${configService.get('MONGO_INITDB_ROOT_USERNAME')}:${configService.get('MONGO_INITDB_ROOT_PASSWORD')}@mongodb:27017/${configService.get('MONGO_INITDB_DATABASE')}?authSource=admin`;
+  const mongoUri = `mongodb://${configService.get('MONGO_INITDB_ROOT_USERNAME')}:${configService.get('MONGO_INITDB_ROOT_PASSWORD')}@${configService.get('MONGO_INSTANCE_NAME')}:27017/${configService.get('MONGO_INITDB_DATABASE')}?authSource=admin`;
   return mongoUri;
 };
 @Module({

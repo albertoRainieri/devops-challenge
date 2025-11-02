@@ -12,6 +12,7 @@ describe('AppController (e2e)', () => {
     // Note: AppModule uses 'mongodb' as hostname, so you may need to
     // override this via environment variables or ensure MongoDB is accessible
     // at the 'mongodb' hostname (e.g., via docker-compose network)
+    process.env.MONGO_INSTANCE_NAME = process.env.MONGO_INSTANCE_NAME || 'mongodb';
     process.env.MONGO_INITDB_ROOT_USERNAME = process.env.MONGO_INITDB_ROOT_USERNAME || 'test';
     process.env.MONGO_INITDB_ROOT_PASSWORD = process.env.MONGO_INITDB_ROOT_PASSWORD || 'test';
     process.env.MONGO_INITDB_DATABASE = process.env.MONGO_INITDB_DATABASE || 'tech_challenge_test';

@@ -27,10 +27,11 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_INSTANCE_NAME: ${MONGO_INSTANCE_NAME}
     command:
       [
         "mongosh",
-        "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin",
+        "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGO_INSTANCE_NAME}:27017/${MONGO_INITDB_DATABASE}?authSource=admin",
         "/scripts/mongo-init-v2.js",
       ]
     restart: "no" # run once and stop
@@ -54,8 +55,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
-      #MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
-      #MONGODB_URI: mongodb://admin:password123@mongodb:27017/tech_challenge?authSource=admin
+      MONGO_INSTANCE_NAME: ${MONGO_INSTANCE_NAME}
     depends_on:
       - mongodb
     networks:
@@ -94,8 +94,8 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
-      #MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_INITDB_DATABASE}?authSource=admin
-      #MONGODB_URI: mongodb://admin:password123@mongodb:27017/tech_challenge?authSource=admin
+      MONGO_INSTANCE_NAME: ${MONGO_INSTANCE_NAME}
+
     volumes:
       - ./app/test:/app/test:ro
     networks:
