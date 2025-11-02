@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "devops-challenge-app.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-challenge-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      {{- include "devops-challenge-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "devops-challenge-app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "devops-challenge-app.serviceAccountName" . }}
+      {{- else if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      containers:
+      - name: app
+        image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+        imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.app.service.targetPort }}
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          {{- if .Values.configMap.enabled }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "devops-challenge-app.fullname" . }}-config
+              key: NODE_ENV
+          {{- else }}
+          value: {{ .Values.app.env.NODE_ENV | quote }}
+          {{- end }}
+        - name: PORT
+          {{- if .Values.configMap.enabled }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "devops-challenge-app.fullname" . }}-config
+              key: PORT
+          {{- else }}
+          value: {{ .Values.app.env.PORT | quote }}
+          {{- end }}
+        - name: MONGO_INSTANCE_NAME
+          {{- if .Values.configMap.enabled }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "devops-challenge-app.fullname" . }}-config
+              key: MONGO_INSTANCE_NAME
+          {{- else }}
+          value: mongodb
+          {{- end }}
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_ROOT_PASSWORD
+        - name: MONGO_INITDB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_DATABASE
+        {{- with .Values.app.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.securityContext.app }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.app.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.app.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+

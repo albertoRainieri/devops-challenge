@@ -1,0 +1,16 @@
+{{- if .Values.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "devops-challenge-app.fullname" . }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-challenge-app.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.app.env.NODE_ENV | quote }}
+  PORT: {{ .Values.app.env.PORT | quote }}
+  MONGO_INSTANCE_NAME: mongodb
+  MONGO_HOST: mongodb
+  MONGO_PORT: "27017"
+{{- end }}
+

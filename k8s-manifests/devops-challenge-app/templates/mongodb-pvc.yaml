@@ -1,0 +1,33 @@
+{{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "devops-challenge-app.fullname" . }}-mongodb-pvc
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-challenge-app.mongodb.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- if .Values.mongodb.persistence.persistentVolume.enabled }}
+    {{- range .Values.mongodb.persistence.persistentVolume.accessModes }}
+    - {{ . }}
+    {{- end }}
+    {{- else }}
+    - ReadWriteOnce
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.mongodb.persistence.size }}
+  {{- if .Values.mongodb.persistence.persistentVolume.enabled }}
+  {{- if .Values.mongodb.persistence.persistentVolume.storageClass }}
+  storageClassName: {{ .Values.mongodb.persistence.persistentVolume.storageClass }}
+  {{- else }}
+  storageClassName: "" # Empty string forces binding to PV without StorageClass
+  {{- end }}
+  {{- else }}
+  {{- if .Values.mongodb.persistence.storageClass }}
+  storageClassName: {{ .Values.mongodb.persistence.storageClass }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+

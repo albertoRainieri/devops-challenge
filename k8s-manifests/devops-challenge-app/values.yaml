@@ -1,0 +1,192 @@
+# Default values for devops-challenge-app
+# This is a YAML-formatted file.
+
+namespace: production
+
+# Application Configuration
+app:
+  name: devops-challenge-app
+  image:
+    repository: docker.io/albertorainieri/devops-challenge
+    tag: production
+    pullPolicy: IfNotPresent
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  env:
+    NODE_ENV: production
+    PORT: "3000"
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# MongoDB Configuration
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "7.0"
+  replicas: 1
+  # Node selection - force MongoDB to run on specific worker node
+  nodeSelector:
+    kubernetes.io/hostname: ip-10-0-11-143
+  # Alternative: Use nodeAffinity for more complex scheduling rules
+  # affinity: {}
+  # Pod-level security context removed - using container-level only
+  # podSecurityContext: {}
+  service:
+    type: ClusterIP
+    port: 27017
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "" # Use default storage class (only used if persistentVolume.enabled is false)
+    # InitContainer to fix permissions on hostPath volumes
+    # NOTE: If your cluster enforces non-root policies, set runAsRoot: false and ensure
+    # the hostPath directory is pre-created with correct permissions on the node.
+    # Alternatively, disable initContainer and rely on fsGroup (may not work for hostPath).
+    initContainer:
+      enabled: true # Set to true to enable permission fix initContainer (requires root or pre-configured permissions)
+      runAsRoot: true # Set to true to run as root (breaks non-root policies), false to run as MongoDB user
+      image: busybox:1.36 # Lightweight image for permission fixes
+      userId: "999" # MongoDB user UID
+      groupId: "999" # MongoDB group GID
+      permissions: "700" # Directory permissions (700 = rwx------, most secure: owner-only access)
+    # PersistentVolume configuration (static provisioning)
+    persistentVolume:
+      enabled: true # Set to true to use PV instead of StorageClass
+      # StorageClassName for PV/PVC binding (can be empty string or specific class)
+      storageClass: "" # Empty string binds to PV without StorageClass
+      # Access modes must match between PV and PVC
+      accessModes:
+        - ReadWriteOnce
+      # Reclaim policy: Retain, Recycle, or Delete
+      reclaimPolicy: Retain
+      # Storage backend type (choose one)
+      # Option 1: hostPath (for local development/testing)
+      hostPath:
+        path: /data/mongodb-data
+        type: DirectoryOrCreate
+      # Option 2: NFS (uncomment and configure if using NFS)
+      # nfs:
+      #   server: nfs-server.example.com
+      #   path: /exports/mongodb
+      # Option 3: AWS EBS (uncomment and configure if using AWS EBS volume)
+      # awsElasticBlockStore:
+      #   volumeID: vol-xxxxxxxxx
+      #   fsType: ext4
+      # Option 4: Local volume (uncomment and configure if using local volumes)
+      # local:
+      #   path: /mnt/disks/mongodb
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  livenessProbe:
+    exec:
+      command:
+        - mongosh
+        - --eval
+        - db.adminCommand("ping")
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - mongosh
+        - --eval
+        - db.adminCommand("ping")
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# MongoDB Secrets
+mongodbSecret:
+  username: admin
+  password: password123
+  database: tech_challenge
+  # Use existing secret name instead of creating one
+  existingSecret: ""
+
+# ConfigMap
+configMap:
+  enabled: true
+
+# Ingress Configuration
+ingress:
+  enabled: true  # Enable ingress to route traffic through nginx ingress controller
+  className: nginx
+  annotations: {}
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # alb.ingress.kubernetes.io/target-type: ip
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+  hosts:
+    - host: devops-challenge.local  # Update with your domain or use * for any host
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: tech-challenge-tls
+  #    hosts:
+  #      - tech-challenge.local
+
+# Service Account
+serviceAccount:
+  create: false
+  name: ""
+
+# Pod Annotations
+podAnnotations: {}
+
+# Pod Security Context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Security Context for containers
+securityContext:
+  app:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+  mongodb:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 999 # MongoDB runs as UID 999 in official image
+
+
+

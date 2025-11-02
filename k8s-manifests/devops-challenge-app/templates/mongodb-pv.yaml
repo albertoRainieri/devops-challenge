@@ -1,0 +1,36 @@
+{{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled .Values.mongodb.persistence.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "devops-challenge-app.fullname" . }}-mongodb-pv
+  labels:
+    {{- include "devops-challenge-app.mongodb.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.mongodb.persistence.size }}
+  accessModes:
+    {{- range .Values.mongodb.persistence.persistentVolume.accessModes }}
+    - {{ . }}
+    {{- end }}
+  {{- if .Values.mongodb.persistence.persistentVolume.storageClass }}
+  storageClassName: {{ .Values.mongodb.persistence.persistentVolume.storageClass }}
+  {{- end }}
+  {{- if .Values.mongodb.persistence.persistentVolume.hostPath }}
+  hostPath:
+    path: {{ .Values.mongodb.persistence.persistentVolume.hostPath.path }}
+    type: {{ .Values.mongodb.persistence.persistentVolume.hostPath.type | default "DirectoryOrCreate" }}
+  {{- else if .Values.mongodb.persistence.persistentVolume.local }}
+  local:
+    path: {{ .Values.mongodb.persistence.persistentVolume.local.path }}
+  {{- else if .Values.mongodb.persistence.persistentVolume.nfs }}
+  nfs:
+    server: {{ .Values.mongodb.persistence.persistentVolume.nfs.server }}
+    path: {{ .Values.mongodb.persistence.persistentVolume.nfs.path }}
+  {{- else if .Values.mongodb.persistence.persistentVolume.awsElasticBlockStore }}
+  awsElasticBlockStore:
+    volumeID: {{ .Values.mongodb.persistence.persistentVolume.awsElasticBlockStore.volumeID }}
+    fsType: {{ .Values.mongodb.persistence.persistentVolume.awsElasticBlockStore.fsType | default "ext4" }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: {{ .Values.mongodb.persistence.persistentVolume.reclaimPolicy | default "Retain" }}
+{{- end }}
+

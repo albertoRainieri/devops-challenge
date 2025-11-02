@@ -1,0 +1,113 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "devops-challenge-app.fullname" . }}-mongodb
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-challenge-app.mongodb.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.mongodb.replicas }}
+  selector:
+    matchLabels:
+      {{- include "devops-challenge-app.mongodb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "devops-challenge-app.mongodb.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.mongodb.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.mongodb.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mongodb.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled .Values.mongodb.persistence.initContainer.enabled }}
+      initContainers:
+      - name: fix-permissions
+        image: {{ .Values.mongodb.persistence.initContainer.image | default "busybox:1.36" }}
+        command:
+          - sh
+          - -c
+          - |
+            echo "Fixing permissions for MongoDB data directory..."
+            chown -R {{ .Values.mongodb.persistence.initContainer.userId | default "999" }}:{{ .Values.mongodb.persistence.initContainer.groupId | default "999" }} /data/db
+            chmod -R {{ .Values.mongodb.persistence.initContainer.permissions | default "700" }} /data/db
+            echo "Permissions fixed. Directory contents:"
+            ls -la /data/db || true
+        {{- if .Values.mongodb.persistence.initContainer.runAsRoot }}
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+        {{- else }}
+        securityContext:
+          runAsUser: {{ .Values.mongodb.persistence.initContainer.userId | default "999" }}
+          runAsGroup: {{ .Values.mongodb.persistence.initContainer.groupId | default "999" }}
+          allowPrivilegeEscalation: false
+        {{- end }}
+        {{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        {{- end }}
+      {{- end }}
+      containers:
+      - name: mongodb
+        image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+        imagePullPolicy: {{ .Values.mongodb.image.pullPolicy | default "IfNotPresent" }}
+        ports:
+        - name: mongodb
+          containerPort: 27017
+          protocol: TCP
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_ROOT_PASSWORD
+        - name: MONGO_INITDB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devops-challenge-app.mongodb.secretName" . }}
+              key: MONGO_INITDB_DATABASE
+        {{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        {{- end }}
+        {{- with .Values.mongodb.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.securityContext.mongodb }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.mongodb.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.mongodb.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
+      volumes:
+      - name: mongodb-data
+        persistentVolumeClaim:
+          claimName: {{ include "devops-challenge-app.fullname" . }}-mongodb-pvc
+      {{- end }}
+{{- end }}
+
