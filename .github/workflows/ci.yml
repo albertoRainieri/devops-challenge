@@ -2,9 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: ["main", "develop"]
-  pull_request:
-    branches: ["main", "develop"]
+    tags: ["**"]
   workflow_dispatch:
 
 permissions:
@@ -291,19 +289,39 @@ jobs:
 
       # ============================================
       # Phase 4: Push to Docker Hub
-      # (only if build and scan succeed, and on main/develop branches)
+      # (only if build and scan succeed, and triggered by git tags)
       # ============================================
+      - name: Extract Docker image tag
+        id: image_tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Use Git tag name as Docker image tag
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "Using Git tag as image tag: ${{ github.ref_name }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]] || \
+               [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            # Use 'production' for main/develop branches (fallback)
+            echo "tag=production" >> $GITHUB_OUTPUT
+            echo "Using default tag: production"
+          else
+            echo "tag=" >> $GITHUB_OUTPUT
+            echo "No tag will be applied for ref: ${{ github.ref }}"
+          fi
+
       - name: Login to Docker Hub
-        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        if: success() && steps.image_tag.outputs.tag != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Tag image for Docker Hub
-        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-        run: docker tag tech-challenge-app:production albertorainieri/devops-challenge:production
+        if: success() && steps.image_tag.outputs.tag != ''
+        run: |
+          docker tag tech-challenge-app:production \
+            albertorainieri/devops-challenge:${{ steps.image_tag.outputs.tag }}
 
       - name: Push image to Docker Hub
-        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-        run: docker push albertorainieri/devops-challenge:production
+        if: success() && steps.image_tag.outputs.tag != ''
+        run: |
+          docker push albertorainieri/devops-challenge:${{ steps.image_tag.outputs.tag }}
