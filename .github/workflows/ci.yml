@@ -163,8 +163,9 @@ jobs:
         # Auto-uploads to GitHub Security tab with security-events: write
 
 
-  build:
-    name: Build Production Image
+  test-build-push:
+    name: Test Build and Push
+    needs: [codeql, megalinter]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -176,79 +177,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build production Docker image
-        uses: docker/build-push-action@v6
-        with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          context: ./app
-          file: ./app/Dockerfile
-          target: production
-          tags: tech-challenge-app:production
-          push: false
-          load: true
-          platforms: linux/amd64
-          build-args: |
-            NODE_ENV=production
-
-      - name: Run Trivy image scanner (table format)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: 'tech-challenge-app:production'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'  # Don't fail, just report errors
-
-      - name: Run Trivy image scanner
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: 'tech-challenge-app:production'
-          format: 'sarif'
-          output: 'trivy-image.sarif'
-          severity: 'CRITICAL'
-          exit-code: '0'
-
-      - name: Upload Trivy SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-image.sarif
-          category: container-scan
-
-      - name: Upload Trivy SARIF as Artifact (optional)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-image.sarif
-          path: trivy-image.sarif
-          retention-days: 7
-          
-      - name: Login to Docker Hub
-        if: success()
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Tag image for Docker Hub
-        if: success()
-        run: docker tag tech-challenge-app:production albertorainieri/devops-challenge:production
-
-      - name: Push image to Docker Hub
-        if: success()
-        run: docker push albertorainieri/devops-challenge:production
-
-  # E2E Tests
-  e2e-tests:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Build production test Docker image
+      # ============================================
+      # Phase 1: E2E Tests
+      # ============================================
+      - name: Build test Docker image
         uses: docker/build-push-action@v6
         with:
           cache-from: type=gha
@@ -276,11 +208,11 @@ jobs:
             -e MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_INITDB_ROOT_PASSWORD }} \
             -e MONGO_INITDB_DATABASE=${{ secrets.MONGO_INITDB_DATABASE }} \
             mongo:7.0
-      
+
       - name: Wait for MongoDB to be ready
         run: |
           timeout 60 bash -c 'until docker exec mongodb mongosh --eval "db.runCommand({ ping: 1 })" --quiet; do sleep 2; done'
-      
+
       - name: Run E2E tests in container
         run: |
           docker run --rm \
@@ -291,10 +223,87 @@ jobs:
             -e MONGO_INITDB_DATABASE=${{ secrets.MONGO_INITDB_DATABASE }} \
             tech-challenge-app:test \
             pnpm test:e2e
-      
-      - name: Cleanup
+
+      - name: Cleanup test resources
         if: always()
         run: |
           docker stop mongodb || true
           docker rm mongodb || true
           docker network rm test-network 2>/dev/null || true
+
+      # ============================================
+      # Phase 2: Build Production Image
+      # (only if tests pass - reuses cache from test build)
+      # ============================================
+      - name: Build production Docker image
+        if: success()
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: ./app
+          file: ./app/Dockerfile
+          target: production
+          tags: tech-challenge-app:production
+          push: false
+          load: true
+          platforms: linux/amd64
+          build-args: |
+            NODE_ENV=production
+
+      # ============================================
+      # Phase 3: Security Scanning
+      # (only if production build succeeds)
+      # ============================================
+      - name: Run Trivy image scanner (table format)
+        if: success()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'tech-challenge-app:production'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail, just report errors
+
+      - name: Run Trivy image scanner (SARIF)
+        if: success()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'tech-challenge-app:production'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          severity: 'CRITICAL'
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: container-scan
+
+      - name: Upload Trivy SARIF as Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image.sarif
+          path: trivy-image.sarif
+          retention-days: 7
+
+      # ============================================
+      # Phase 4: Push to Docker Hub
+      # (only if build and scan succeed, and on main/develop branches)
+      # ============================================
+      - name: Login to Docker Hub
+        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Tag image for Docker Hub
+        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        run: docker tag tech-challenge-app:production albertorainieri/devops-challenge:production
+
+      - name: Push image to Docker Hub
+        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        run: docker push albertorainieri/devops-challenge:production
