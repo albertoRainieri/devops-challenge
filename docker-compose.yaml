@@ -30,9 +30,9 @@ services:
       MONGO_INSTANCE_NAME: ${MONGO_INSTANCE_NAME}
     command:
       [
-        "mongosh",
-        "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGO_INSTANCE_NAME}:27017/${MONGO_INITDB_DATABASE}?authSource=admin",
-        "/scripts/mongo-init-v2.js",
+        "sh",
+        "-c",
+        "until mongosh \"mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGO_INSTANCE_NAME}:27017/${MONGO_INITDB_DATABASE}?authSource=admin\" --eval 'db.adminCommand(\"ping\")' > /dev/null 2>&1; do echo \"Waiting for MongoDB to be ready...\"; sleep 2; done; exec mongosh \"mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@${MONGO_INSTANCE_NAME}:27017/${MONGO_INITDB_DATABASE}?authSource=admin\" /scripts/mongo-init-v2.js",
       ]
     restart: "no" # run once and stop
     networks:

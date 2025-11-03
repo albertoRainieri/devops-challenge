@@ -1,5 +1,7 @@
 # Build stage
-FROM node:20-alpine AS builder
+ARG PLATFORM=linux/amd64
+
+FROM --platform=${PLATFORM} node:alpine3.22 AS builder
 WORKDIR /app
 #nstalls pnpm package manager globally
 RUN npm install -g pnpm
@@ -12,12 +14,11 @@ RUN pnpm build
 
 # Test stage
 # Multi-stage build to keep the image size small
-#TODO: check if there is a more effient image than node:20-alpine
-FROM node:20-alpine AS test
+FROM --platform=${PLATFORM} node:alpine3.22 AS test
 WORKDIR /app
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY --from=builder /app/node_modules ./node_modules
 # Copies the compiled JavaScript from the builder stage
 COPY --from=builder /app/dist ./dist
 # Copy ONLY what's needed for tests
@@ -37,8 +38,7 @@ CMD ["pnpm", "test:e2e"]
 
 # Production stage
 # Multi-stage build to keep the image size small
-#TODO: check if there is a more effient image than node:20-alpine
-FROM node:20-alpine AS production
+FROM --platform=${PLATFORM} node:alpine3.22 AS production
 WORKDIR /app
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
