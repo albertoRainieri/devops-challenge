@@ -512,24 +512,6 @@ The dashboard uses standard Prometheus queries to aggregate metrics from Nginx I
 helm upgrade --install monitoring ./k8s-manifests/monitoring --namespace monitoring --create-namespace
 ```
 
-### Access
-
-- **Prometheus UI**: Accessible via port-forward: `kubectl port-forward -n monitoring svc/monitoring-prometheus 9090:9090`
-- **Grafana UI**: 
-  - Via Ingress: Accessible at `/prometheus` path on the same host as the application (e.g., `http://devops-challenge.local/prometheus`). The Grafana Ingress routes `/prometheus` to the Grafana service on port 3000.
-  - Via port-forward: `kubectl port-forward -n monitoring svc/monitoring-grafana 3000:3000` (default credentials: admin/admin)
-
-### Benefits of This Approach
-
-1. **Zero Code Changes**: No application modifications required, making it a true DevOps solution
-2. **Infrastructure-First**: Focuses on operational observability using existing infrastructure components
-3. **Complete Coverage**: Captures all application traffic through ingress, providing comprehensive metrics
-4. **Kubernetes-Native**: Uses standard Kubernetes metrics and service discovery mechanisms
-5. **Cost-Effective**: Lightweight monitoring stack suitable for development/test environments
-6. **Production-Ready Pattern**: Follows industry-standard monitoring practices used in production Kubernetes environments
-
-This monitoring solution successfully tracks all required metrics (request latency, error rates, container health) while demonstrating a DevOps-focused approach to observability that prioritizes infrastructure-level metrics collection over application instrumentation.
-
 ### Additional Monitoring Considerations
 
 While the current implementation provides comprehensive infrastructure-level observability, several additional monitoring approaches were considered but not implemented due to time constraints:
@@ -537,5 +519,33 @@ While the current implementation provides comprehensive infrastructure-level obs
 - **Application Performance Monitoring (APM)**: Tools like OpenTelemetry, Jaeger, or Datadog APM could provide deeper application-level insights, including distributed tracing, transaction-level performance analysis, and code-level profiling. This would complement the infrastructure metrics by providing visibility into application internals, database query performance, and service dependencies.
 
 These enhancements would be valuable additions for a production environment, but the current infrastructure-focused monitoring solution adequately addresses the challenge requirements while maintaining simplicity and avoiding application code modifications.
+
+---
+
+## 9. Proof of Deployment
+
+This section provides visual evidence of the deployed infrastructure and application.
+
+### Application Status
+
+The application is successfully deployed and accessible via the configured ingress:
+
+![Application Dashboard](screenshots/app%20dashboard.png)
+
+### AWS Infrastructure
+
+The Terraform-managed infrastructure is deployed on AWS:
+
+**EC2 Instances Status:**
+![AWS EC2 Instances](screenshots/aws_ec2_status.png)
+
+**Terraform Resources:**
+![AWS Resources Deployed](screenshots/aws_resource_deployed.png)
+
+### Kubernetes Cluster Status
+
+The Kubernetes cluster is operational with all pods and nodes running:
+
+![Kubernetes Cluster Status](screenshots/kubectl_get_pods_nodes.png)
 
 
