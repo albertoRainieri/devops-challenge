@@ -2,6 +2,8 @@
 
 ## 1. Containerization
 
+**File Reference**: [`app/Dockerfile`](app/Dockerfile)
+
 ### Dockerfile Architecture
 
 The Dockerfile implements a **multi-stage build** pattern to create efficient, secure, and optimized Docker images for the NestJS application. The build process is divided into three distinct stages: `builder`, `test`, and `production`.
@@ -41,6 +43,11 @@ The production stage is optimized for runtime efficiency by installing only prod
 
 ## 2. Database Initialization
 
+**File References**: 
+- [`docker-compose.yaml`](docker-compose.yaml) - Docker Compose configuration with mongo-init service
+- [`app/init_scripts/mongo-init-v2.js`](app/init_scripts/mongo-init-v2.js) - Idempotent initialization script
+- [`app/init_scripts/mongo-init.js`](app/init_scripts/mongo-init.js) - Original initialization script
+
 ### Approach: Dedicated Init Container
 
 A dedicated `mongo-init` container was created in the Docker Compose configuration to handle database schema initialization automatically. This container runs as a separate service that executes once MongoDB is ready and available for connections.
@@ -64,6 +71,10 @@ This approach prevents duplicate data insertion on container restarts while ensu
 The same goal could be achieved by mounting the original initialization script (`mongo-init.js`) directly into MongoDB's `/docker-entrypoint-initdb.d` directory. MongoDB automatically executes any scripts placed in this directory when the database is initialized for the first time.
 
 ## 3. Local Orchestration
+
+**File References**: 
+- [`docker-compose.yaml`](docker-compose.yaml) - Main Docker Compose configuration
+- [`app/src/app.module.ts`](app/src/app.module.ts) - Application module with dynamic MongoDB URI configuration
 
 ### Docker Compose Architecture
 
@@ -104,6 +115,10 @@ A Simple Health check is implemented at the Docker Compose level rather than in 
 This decision to handle health checks at the orchestration level provides flexibility to configure different health check strategies for different environments without rebuilding images.
 
 ## 4. Automation (CI/CD)
+
+**File References**: 
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) - GitHub Actions CI pipeline definition
+- [`flux/apps/devops-challenge-app.yaml`](flux/apps/devops-challenge-app.yaml) - Flux HelmRelease for CD
 
 ### Continuous Integration: GitHub Actions
 
@@ -167,6 +182,12 @@ This GitOps approach ensures that the cluster state always matches the desired s
 
 
 ## 5. Security Fundamentals
+
+**File References**: 
+- [`.gitignore`](.gitignore) - Excludes `.env` files from version control
+- [`k8s-manifests/devops-challenge-app/templates/mongodb-secret.yaml`](k8s-manifests/devops-challenge-app/templates/mongodb-secret.yaml) - Kubernetes Secret template
+- [`k8s-manifests/devops-challenge-app/templates/app-deployment.yaml`](k8s-manifests/devops-challenge-app/templates/app-deployment.yaml) - Application deployment with security contexts
+- [`k8s-manifests/devops-challenge-app/templates/mongodb-deployment.yaml`](k8s-manifests/devops-challenge-app/templates/mongodb-deployment.yaml) - MongoDB deployment with security contexts
 
 Security was a primary consideration throughout the development of this project. Multiple layers of security measures were implemented across different stages of the development and deployment lifecycle, addressing secrets management, container security, and access control.
 
@@ -251,6 +272,16 @@ Network security was addressed through multiple layers:
 
 ## 6. Infrastructure as Code (IaC)
 
+**File References**: 
+- [`terraform/k8s-cluster/`](terraform/k8s-cluster/) - Main Terraform configuration directory
+  - [`terraform/k8s-cluster/main.tf`](terraform/k8s-cluster/main.tf) - Main Terraform configuration
+  - [`terraform/k8s-cluster/vpc.tf`](terraform/k8s-cluster/vpc.tf) - VPC and networking configuration
+  - [`terraform/k8s-cluster/ec2.tf`](terraform/k8s-cluster/ec2.tf) - EC2 instances and IAM roles
+  - [`terraform/k8s-cluster/security-groups.tf`](terraform/k8s-cluster/security-groups.tf) - Security group rules
+  - [`terraform/k8s-cluster/k8s-setup.tf`](terraform/k8s-cluster/k8s-setup.tf) - Kubernetes installation user data scripts
+  - [`terraform/k8s-cluster/haproxy.tf`](terraform/k8s-cluster/haproxy.tf) - HAProxy configuration
+  - [`terraform/k8s-cluster/templates/haproxy.cfg.tpl`](terraform/k8s-cluster/templates/haproxy.cfg.tpl) - HAProxy template
+
 ### Terraform Configuration
 
 A comprehensive Terraform configuration was created in the `terraform/k8s-cluster` directory to provision all necessary AWS cloud infrastructure for deploying a Kubernetes cluster. The infrastructure was designed with cost optimization and security as primary considerations.
@@ -316,6 +347,20 @@ Instance types and sizes were carefully selected to provide the minimal required
 This configuration provides a functional Kubernetes cluster suitable for development and testing while keeping AWS infrastructure costs to a minimum.
 
 ## 7. Kubernetes Manifests
+
+**File References**: 
+- [`k8s-manifests/devops-challenge-app/`](k8s-manifests/devops-challenge-app/) - Helm chart directory
+  - [`k8s-manifests/devops-challenge-app/Chart.yaml`](k8s-manifests/devops-challenge-app/Chart.yaml) - Chart metadata
+  - [`k8s-manifests/devops-challenge-app/values.yaml`](k8s-manifests/devops-challenge-app/values.yaml) - Default configuration values
+  - [`k8s-manifests/devops-challenge-app/templates/`](k8s-manifests/devops-challenge-app/templates/) - Kubernetes manifest templates
+    - [`k8s-manifests/devops-challenge-app/templates/_helpers.tpl`](k8s-manifests/devops-challenge-app/templates/_helpers.tpl) - Template helpers
+    - [`k8s-manifests/devops-challenge-app/templates/app-deployment.yaml`](k8s-manifests/devops-challenge-app/templates/app-deployment.yaml) - Application deployment
+    - [`k8s-manifests/devops-challenge-app/templates/app-service.yaml`](k8s-manifests/devops-challenge-app/templates/app-service.yaml) - Application service
+    - [`k8s-manifests/devops-challenge-app/templates/mongodb-deployment.yaml`](k8s-manifests/devops-challenge-app/templates/mongodb-deployment.yaml) - MongoDB deployment
+    - [`k8s-manifests/devops-challenge-app/templates/mongodb-service.yaml`](k8s-manifests/devops-challenge-app/templates/mongodb-service.yaml) - MongoDB service
+    - [`k8s-manifests/devops-challenge-app/templates/mongodb-secret.yaml`](k8s-manifests/devops-challenge-app/templates/mongodb-secret.yaml) - MongoDB secret template
+    - [`k8s-manifests/devops-challenge-app/templates/ingress.yaml`](k8s-manifests/devops-challenge-app/templates/ingress.yaml) - Ingress resource
+- [`k8s-manifests/ingress-nginx/install-nginx-ingress.sh`](k8s-manifests/ingress-nginx/install-nginx-ingress.sh) - Nginx Ingress installation script
 
 ### Helm Chart Implementation
 
