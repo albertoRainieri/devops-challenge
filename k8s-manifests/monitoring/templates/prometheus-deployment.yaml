@@ -1,0 +1,71 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "monitoring.fullname" . }}-prometheus
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "monitoring.prometheus.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.prometheus.replicas }}
+  selector:
+    matchLabels:
+      {{- include "monitoring.prometheus.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "monitoring.prometheus.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "monitoring.fullname" . }}-prometheus
+      containers:
+      - name: prometheus
+        image: "{{ .Values.prometheus.image.repository }}:{{ .Values.prometheus.image.tag }}"
+        imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+          - '--storage.tsdb.retention.time={{ .Values.prometheus.storage.retention }}'
+          - '--web.console.libraries=/etc/prometheus/console_libraries'
+          - '--web.console.templates=/etc/prometheus/consoles'
+          - '--web.enable-lifecycle'
+        ports:
+        - name: web
+          containerPort: 9090
+          protocol: TCP
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        {{- with .Values.prometheus.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: {{ include "monitoring.fullname" . }}-prometheus-config
+      {{- if .Values.prometheus.storage.storageClass }}
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: {{ include "monitoring.fullname" . }}-prometheus-storage
+      {{- else }}
+      - name: prometheus-storage
+        emptyDir:
+          sizeLimit: {{ .Values.prometheus.storage.size }}
+      {{- end }}
+{{- end }}
+
+

@@ -1,0 +1,159 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring.fullname" . }}-grafana-datasources
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "monitoring.grafana.labels" . | nindent 4 }}
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://{{ include "monitoring.fullname" . }}-prometheus.{{ .Values.namespace }}.svc.cluster.local:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring.fullname" . }}-grafana-dashboard
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "monitoring.grafana.labels" . | nindent 4 }}
+data:
+  devops-challenge-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "DevOps Challenge - Application Monitoring",
+        "tags": ["devops-challenge", "nginx", "kubernetes"],
+        "timezone": "browser",
+        "schemaVersion": 27,
+        "version": 1,
+        "refresh": "10s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate (Nginx Ingress)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_ingress_controller_requests[5m])) by (ingress, status)",
+                "legendFormat": "{{ "{{" }}ingress{{ "}}" }} - {{ "{{" }}status{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {
+                "label": "Requests/sec",
+                "format": "reqps"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Request Latency - p95 (Nginx Ingress)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, ingress))",
+                "legendFormat": "{{ "{{" }}ingress{{ "}}" }} - p95",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {
+                "label": "Seconds",
+                "format": "s"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Error Rate (Nginx Ingress)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[5m])) by (ingress)",
+                "legendFormat": "{{ "{{" }}ingress{{ "}}" }} - 5xx",
+                "refId": "A"
+              },
+              {
+                "expr": "sum(rate(nginx_ingress_controller_requests{status=~\"4..\"}[5m])) by (ingress)",
+                "legendFormat": "{{ "{{" }}ingress{{ "}}" }} - 4xx",
+                "refId": "B"
+              }
+            ],
+            "yaxes": [
+              {
+                "label": "Errors/sec",
+                "format": "reqps"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Container CPU Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"{{ .Values.scrapeConfigs.targetNamespace }}\"}[5m])) by (pod)",
+                "legendFormat": "{{ "{{" }}pod{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {
+                "label": "CPU Cores",
+                "format": "short"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Container Memory Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"{{ .Values.scrapeConfigs.targetNamespace }}\"}) by (pod)",
+                "legendFormat": "{{ "{{" }}pod{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {
+                "label": "Bytes",
+                "format": "bytes"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Pod Status",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "kube_pod_status_phase{namespace=\"{{ .Values.scrapeConfigs.targetNamespace }}\"}",
+                "legendFormat": "{{ "{{" }}pod{{ "}}" }} - {{ "{{" }}phase{{ "}}" }}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {
+                "format": "short"
+              }
+            ]
+          }
+        ]
+      }
+    }
+{{- end }}

@@ -1,0 +1,58 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring.fullname" . }}-prometheus-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "monitoring.prometheus.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'devops-challenge-k8s'
+
+    scrape_configs:
+      # Scrape Nginx Ingress Controller metrics
+      - job_name: 'nginx-ingress'
+        scheme: http
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - {{ .Values.scrapeConfigs.ingressNamespace }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: controller
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            target_label: __address__
+            replacement: '${1}:10254'  # Nginx Ingress metrics port
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: kubernetes_pod_name
+
+      # Scrape Kubernetes nodes (cAdvisor metrics)
+      - job_name: 'kubernetes-cadvisor'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_address_InternalIP]
+            action: replace
+            target_label: __address__
+            replacement: '${1}:10250'
+          - action: replace
+            target_label: __metrics_path__
+            replacement: /metrics/cadvisor
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: kubernetes_node_name
+{{- end }}

@@ -1,0 +1,77 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "monitoring.fullname" . }}-grafana
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "monitoring.grafana.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.grafana.replicas }}
+  selector:
+    matchLabels:
+      {{- include "monitoring.grafana.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "monitoring.grafana.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: grafana
+        image: "{{ .Values.grafana.image.repository }}:{{ .Values.grafana.image.tag }}"
+        imagePullPolicy: {{ .Values.grafana.image.pullPolicy }}
+        ports:
+        - name: grafana
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: {{ .Values.grafana.adminUser | quote }}
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: {{ .Values.grafana.adminPassword | quote }}
+        - name: GF_SERVER_ROOT_URL
+          value: "http://{{ include "monitoring.fullname" . }}-grafana.{{ .Values.namespace }}.svc.cluster.local"
+        - name: GF_INSTALL_PLUGINS
+          value: ""
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboard
+          mountPath: /etc/grafana/provisioning/dashboards
+        {{- with .Values.grafana.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      {{- if .Values.grafana.storage.storageClass }}
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: {{ include "monitoring.fullname" . }}-grafana-storage
+      {{- else }}
+      - name: grafana-storage
+        emptyDir:
+          sizeLimit: {{ .Values.grafana.storage.size }}
+      {{- end }}
+      - name: grafana-datasources
+        configMap:
+          name: {{ include "monitoring.fullname" . }}-grafana-datasources
+      - name: grafana-dashboard
+        configMap:
+          name: {{ include "monitoring.fullname" . }}-grafana-dashboard
+{{- end }}
+
+

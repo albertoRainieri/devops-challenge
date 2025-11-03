@@ -1,0 +1,65 @@
+# Default values for monitoring stack
+# This is a YAML-formatted file.
+
+namespace: monitoring
+
+# Prometheus Configuration
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: "v2.48.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  storage:
+    retention: "15d"
+    size: "10Gi"
+    storageClass: ""  # Use emptyDir if empty
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: "10.2.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  adminUser: admin
+  adminPassword: admin
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  storage:
+    size: "2Gi"
+    storageClass: ""  # Use emptyDir if empty
+  # Ingress Configuration
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: devops-challenge.local  # Same host as app ingress
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            servicePort: 3000
+    tls: []
+
+# Scrape Configuration
+scrapeConfigs:
+  # Namespace to monitor for application metrics
+  targetNamespace: production
+  # Nginx Ingress namespace
+  ingressNamespace: ingress-nginx
+

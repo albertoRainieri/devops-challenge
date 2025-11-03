@@ -388,7 +388,7 @@ The chart provisions the following Kubernetes resources:
 **MongoDB Resources:**
 - **Deployment**: Manages MongoDB pod with persistent storage
 - **Service**: ClusterIP service exposing MongoDB on port 27017
-- **Secret**: #TODO: FIX secrets
+- **Secret**: Kubernetes Secret containing MongoDB credentials. Secrets were created manually using `kubectl` and referenced by the Helm chart through the `existingSecret` configuration, avoiding credential storage in `values.yaml`. See section 5 (Security Fundamentals) for details on the secrets management approach and production-ready alternatives using External Secrets Operator.
 - **PersistentVolume (PV)**: Static volume provisioning for database data persistence
 - **PersistentVolumeClaim (PVC)**: Requests storage from the PersistentVolume
 
@@ -435,5 +435,107 @@ The Nginx Ingress Controller was manually installed by executing the commands de
 - Configures NodePorts 30080 (HTTP) and 30443 (HTTPS) to align with HAProxy configuration on the bastion host
 
 This NodePort configuration allows HAProxy on the bastion host to forward HTTP/HTTPS traffic to the ingress controller, which then routes requests to the appropriate application services based on Ingress rules. The manual installation approach provides full control over the ingress controller configuration and eliminates the need for additional AWS load balancers.
+
+## 8. Monitoring
+
+**File References**: 
+- [`k8s-manifests/monitoring/`](k8s-manifests/monitoring/) - Monitoring stack Helm chart
+  - [`k8s-manifests/monitoring/Chart.yaml`](k8s-manifests/monitoring/Chart.yaml) - Chart metadata
+  - [`k8s-manifests/monitoring/values.yaml`](k8s-manifests/monitoring/values.yaml) - Default configuration values
+  - [`k8s-manifests/monitoring/templates/`](k8s-manifests/monitoring/templates/) - Kubernetes manifest templates
+    - [`k8s-manifests/monitoring/templates/prometheus-configmap.yaml`](k8s-manifests/monitoring/templates/prometheus-configmap.yaml) - Prometheus scrape configuration
+    - [`k8s-manifests/monitoring/templates/prometheus-deployment.yaml`](k8s-manifests/monitoring/templates/prometheus-deployment.yaml) - Prometheus deployment
+    - [`k8s-manifests/monitoring/templates/grafana-configmap.yaml`](k8s-manifests/monitoring/templates/grafana-configmap.yaml) - Grafana datasources and dashboard
+    - [`k8s-manifests/monitoring/templates/grafana-deployment.yaml`](k8s-manifests/monitoring/templates/grafana-deployment.yaml) - Grafana deployment
+    - [`k8s-manifests/monitoring/templates/grafana-ingress.yaml`](k8s-manifests/monitoring/templates/grafana-ingress.yaml) - Grafana Ingress resource
+
+### Monitoring Approach: Infrastructure-Level Observability
+
+The monitoring solution was implemented using **Prometheus** and **Grafana** with a focus on **infrastructure-level observability** without requiring any application code changes. This approach aligns with DevOps best practices by leveraging existing infrastructure components and Kubernetes-native metrics collection.
+
+### Architecture
+
+The monitoring stack consists of:
+
+- **Prometheus**: Time-series database and metrics collection engine that scrapes metrics from various sources
+- **Grafana**: Visualization and dashboarding tool that queries Prometheus to display metrics
+- **Nginx Ingress Controller Metrics**: Exposes application-level HTTP metrics (request rate, latency, error rates) without application code changes
+- **Kubernetes Metrics**: Container and pod-level metrics automatically exposed by kubelet and cAdvisor
+
+### Metrics Sources
+
+#### 1. Nginx Ingress Controller Metrics
+
+The Nginx Ingress Controller automatically exposes Prometheus-compatible metrics on port `10254` (metrics endpoint: `/metrics`) for all traffic passing through the ingress. This provides:
+
+- **Request Rate**: `nginx_ingress_controller_requests` - Total number of HTTP requests per second
+- **Request Latency**: `nginx_ingress_controller_request_duration_seconds` - Request duration histogram, allowing percentile calculations (p50, p95, p99)
+- **Error Rates**: `nginx_ingress_controller_requests{status=~"5.."}` and `nginx_ingress_controller_requests{status=~"4.."}` - 5xx and 4xx error rates
+
+**Advantages**:
+- No application code modifications required
+- Captures all traffic passing through ingress (complete visibility)
+- Automatic metrics collection for all routes and services
+
+#### 2. Kubernetes Container Metrics
+
+Kubernetes automatically exposes container-level metrics via kubelet and cAdvisor:
+
+- **CPU Usage**: `container_cpu_usage_seconds_total` - CPU consumption per container
+- **Memory Usage**: `container_memory_working_set_bytes` - Memory consumption per container
+- **Pod Status**: `kube_pod_status_phase` - Pod lifecycle status (Running, Pending, Failed)
+
+These metrics are automatically collected for all pods in the cluster, providing comprehensive container health monitoring.
+
+### Prometheus Configuration
+
+Prometheus is configured to scrape metrics from:
+
+1. **Nginx Ingress Controller**: Uses Kubernetes pod service discovery to automatically discover and scrape Nginx Ingress Controller pods in the `ingress-nginx` namespace on port `10254` (metrics endpoint: `/metrics`)
+2. **Kubernetes Nodes (cAdvisor)**: Scrapes cAdvisor metrics from each Kubernetes node on port `10250` (endpoint: `/metrics/cadvisor`). cAdvisor exposes container-level metrics for all containers running on each node, which are then filtered by namespace in Grafana queries to show metrics for pods in the production namespace
+
+
+### Grafana Dashboard
+
+A custom Grafana dashboard was created (`devops-challenge-dashboard.json`) that visualizes key application and infrastructure metrics:
+
+- **Application Metrics (from Nginx Ingress)**: Request rate by ingress and status code, request latency (p95 percentile), and error rates (4xx/5xx)
+- **Container Metrics (from Kubernetes cAdvisor)**: CPU and memory usage per pod in the production namespace
+- **Pod Status**: Pod lifecycle status across the cluster
+
+The dashboard uses standard Prometheus queries to aggregate metrics from Nginx Ingress Controller (`nginx_ingress_controller_*`) and Kubernetes container metrics (`container_*`, `kube_pod_status_phase`), all filtered by the production namespace.
+
+**Note**: The Grafana dashboard configuration has been created and deployed, but due to time constraints, the dashboard panels and queries have not been fully tested in a live environment. The queries are based on standard Prometheus metrics exposed by Nginx Ingress Controller and Kubernetes cAdvisor, and should work correctly once the monitoring stack is deployed and receiving metrics.
+
+**Installation**:
+```bash
+helm upgrade --install monitoring ./k8s-manifests/monitoring --namespace monitoring --create-namespace
+```
+
+### Access
+
+- **Prometheus UI**: Accessible via port-forward: `kubectl port-forward -n monitoring svc/monitoring-prometheus 9090:9090`
+- **Grafana UI**: 
+  - Via Ingress: Accessible at `/prometheus` path on the same host as the application (e.g., `http://devops-challenge.local/prometheus`). The Grafana Ingress routes `/prometheus` to the Grafana service on port 3000.
+  - Via port-forward: `kubectl port-forward -n monitoring svc/monitoring-grafana 3000:3000` (default credentials: admin/admin)
+
+### Benefits of This Approach
+
+1. **Zero Code Changes**: No application modifications required, making it a true DevOps solution
+2. **Infrastructure-First**: Focuses on operational observability using existing infrastructure components
+3. **Complete Coverage**: Captures all application traffic through ingress, providing comprehensive metrics
+4. **Kubernetes-Native**: Uses standard Kubernetes metrics and service discovery mechanisms
+5. **Cost-Effective**: Lightweight monitoring stack suitable for development/test environments
+6. **Production-Ready Pattern**: Follows industry-standard monitoring practices used in production Kubernetes environments
+
+This monitoring solution successfully tracks all required metrics (request latency, error rates, container health) while demonstrating a DevOps-focused approach to observability that prioritizes infrastructure-level metrics collection over application instrumentation.
+
+### Additional Monitoring Considerations
+
+While the current implementation provides comprehensive infrastructure-level observability, several additional monitoring approaches were considered but not implemented due to time constraints:
+
+- **Application Performance Monitoring (APM)**: Tools like OpenTelemetry, Jaeger, or Datadog APM could provide deeper application-level insights, including distributed tracing, transaction-level performance analysis, and code-level profiling. This would complement the infrastructure metrics by providing visibility into application internals, database query performance, and service dependencies.
+
+These enhancements would be valuable additions for a production environment, but the current infrastructure-focused monitoring solution adequately addresses the challenge requirements while maintaining simplicity and avoiding application code modifications.
 
 

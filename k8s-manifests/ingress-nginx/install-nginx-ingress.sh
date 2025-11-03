@@ -21,6 +21,8 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --set controller.ingressClassResource.name=nginx \
   --set controller.ingressClassResource.enabled=true \
   --set controller.ingressClassResource.default=true \
+  --set controller.metrics.enabled=true \
+  --set controller.metrics.serviceMonitor.enabled=false \
   --set controller.resources.requests.cpu=100m \
   --set controller.resources.requests.memory=128Mi \
   --set controller.resources.limits.cpu=200m \
