@@ -130,11 +130,11 @@ mongodb:
 
 # MongoDB Secrets
 mongodbSecret:
-  username: admin
-  password: password123
-  database: tech_challenge
+  username: ""
+  password: ""
+  database: ""
   # Use existing secret name instead of creating one
-  existingSecret: ""
+  existingSecret: "devops-challenge-app-mongodb-secret"
 
 # ConfigMap
 configMap:

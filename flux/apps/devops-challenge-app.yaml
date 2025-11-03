@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2  # ✅ Change from v2beta1 to v2
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: devops-challenge-app

@@ -1,4 +1,4 @@
-# DevOps Challenge - Containerization Documentation
+# DevOps Challenge
 
 ## 1. Containerization
 
@@ -61,7 +61,7 @@ This approach prevents duplicate data insertion on container restarts while ensu
 
 ### Alternative Approach
 
-The same goal could be achieved by mounting the initialization script directly into MongoDB's `/docker-entrypoint-initdb.d` directory. MongoDB automatically executes any scripts placed in this directory when the database is initialized for the first time.
+The same goal could be achieved by mounting the original initialization script (`mongo-init.js`) directly into MongoDB's `/docker-entrypoint-initdb.d` directory. MongoDB automatically executes any scripts placed in this directory when the database is initialized for the first time.
 
 ## 3. Local Orchestration
 
@@ -167,6 +167,86 @@ This GitOps approach ensures that the cluster state always matches the desired s
 
 
 ## 5. Security Fundamentals
+
+Security was a primary consideration throughout the development of this project. Multiple layers of security measures were implemented across different stages of the development and deployment lifecycle, addressing secrets management, container security, and access control.
+
+### Secrets Management
+
+Secrets management was implemented using different strategies appropriate for each environment, ensuring sensitive credentials are never exposed in version control or configuration files.
+
+#### Local Development (Docker Compose)
+
+For local development environments, secrets are managed through `.env` files that are explicitly excluded from version control via `.gitignore`. This approach:
+
+- **Prevents accidental credential exposure**: By ensuring `.env` files are never committed to Git repositories
+- **Simplifies local development**: Developers can easily configure environment-specific credentials without modifying tracked configuration files
+- **Enforces best practices**: The `.gitignore` exclusion serves as a reminder to developers about the importance of not committing sensitive data.
+
+#### Continuous Integration (GitHub Actions)
+
+In the CI pipeline implemented with GitHub Actions, secrets are managed through **GitHub Secrets**, which provide a secure, centralized mechanism for storing sensitive information. This choice offers several advantages:
+
+- **Secure storage**: GitHub Secrets are encrypted at rest and are only accessible during workflow execution
+- **Access control**: Secrets can be scoped to specific repositories and environments, limiting exposure
+- **No exposure in logs**: GitHub automatically redacts secret values from workflow logs
+
+This approach ensures that CI/CD pipelines can securely access credentials needed for building, testing, and pushing Docker images without exposing sensitive data in code or configuration files.
+
+#### Continuous Deployment (Kubernetes)
+
+For the Kubernetes production environment, secrets are managed using **Kubernetes Secrets**. In this implementation:
+
+- **Manual secret creation**: Secrets were created manually using `kubectl` before deploying the Helm chart
+- **Helm chart integration**: The Helm chart supports using existing secrets through the `existingSecret` configuration option, avoiding the need to store credentials in `values.yaml`
+
+**Production-Ready Approach**: For a production environment, manual secret creation would be replaced with **External Secrets Operator (ESO)**, which provides automated secret synchronization from external secret management systems. Two primary options were considered:
+
+- **AWS Systems Manager Parameter Store**: Preferred for simple, AWS-native environments. This solution offers:
+  - Zero cost for Standard parameters (suitable for credential storage)
+  - Native AWS integration with IAM-based access control
+  - Automatic encryption via AWS KMS
+  - Seamless integration with External Secrets Operator
+  - CloudTrail audit logging
+
+- **HashiCorp Vault**: Preferred for complex environments requiring:
+  - Multi-cloud deployments
+  - Advanced secret rotation policies
+  - Complex access control requirements beyond IAM
+  - Dynamic secret generation
+  - On-premises or hybrid deployments
+
+For this use case, AWS Systems Manager Parameter Store would be the optimal choice due to its simplicity, cost-effectiveness (free Standard parameters), and seamless AWS integration. However, HashiCorp Vault would be considered if the deployment required multi-cloud capabilities or more complex secret management policies.
+
+### Secure Container Configuration
+
+Container security was ensured through multiple mechanisms:
+
+#### Non-Root User Execution
+
+All container stages in the Dockerfile run as a non-root user (`node` user with UID 1000), following the principle of least privilege. This reduces the attack surface by:
+- Preventing privilege escalation attacks
+- Limiting potential damage if a container is compromised
+- Meeting security compliance requirements
+
+#### Least Privilege Principles
+
+The Kubernetes deployment enforces additional security measures:
+
+- **Security Contexts**: Both application and MongoDB containers are configured with security contexts that:
+  - Prevent privilege escalation (`allowPrivilegeEscalation: false`)
+  - Drop all Linux capabilities (`capabilities.drop: [ALL]`)
+  - Enforce non-root execution (`runAsNonRoot: true`)
+
+- **Pod Security Context**: Pod-level security contexts ensure containers cannot access resources beyond their required permissions
+
+These security configurations, combined with the multi-stage build pattern that minimizes the production image attack surface, provide a robust security foundation for containerized applications.
+
+### Network Security
+
+Network security was addressed through multiple layers:
+
+- **Kubernetes**: Services use ClusterIP type, ensuring they are only accessible within the cluster and not exposed externally. In environments with multiple applications across multiple namespaces, Kubernetes Network Policies could be introduced to implement micro-segmentation, allowing fine-grained control over pod-to-pod communication and enforcing the principle of least privilege at the network level
+- **AWS Infrastructure**: Security groups and network ACLs enforce strict firewall rules (documented in section 6)
 
 
 ## 6. Infrastructure as Code (IaC)
