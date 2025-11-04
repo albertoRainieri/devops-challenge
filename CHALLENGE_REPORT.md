@@ -376,7 +376,7 @@ The Helm chart follows Kubernetes best practices with a modular structure:
 - **_helpers.tpl**: Shared template helpers for consistent naming and labeling across all resources
 
 ### Kubernetes Resources
-
+For this project, the deployments were defined considering that all applications run as non-root users (UID 1000) with restricted capabilities, ensuring all capabilities are dropped. Both the application and MongoDB containers are configured to enforce non-root execution, prevent privilege escalation, and adhere to the principle of least privilege.
 The chart provisions the following Kubernetes resources:
 
 **Application Resources:**
@@ -385,6 +385,7 @@ The chart provisions the following Kubernetes resources:
 - **ConfigMap**: Stores non-sensitive application configuration (environment variables like NODE_ENV, PORT)
 - **Ingress**: Routes external HTTP/HTTPS traffic to the application service
 
+
 **MongoDB Resources:**
 - **Deployment**: Manages MongoDB pod with persistent storage
 - **Service**: ClusterIP service exposing MongoDB on port 27017
@@ -392,8 +393,26 @@ The chart provisions the following Kubernetes resources:
 - **PersistentVolume (PV)**: Static volume provisioning for database data persistence
 - **PersistentVolumeClaim (PVC)**: Requests storage from the PersistentVolume
 
-**Common Resources:**
-- **Namespace**: Isolates the application and its resources in a dedicated namespace (default: production)
+**MongoDB Limitations and Production Considerations:**
+
+The current MongoDB implementation prioritizes simplicity and ease of setup for the challenge environment. However, several limitations should be addressed for production deployments:
+
+1. **Deployment vs StatefulSet**: A standard `Deployment` resource was used for simplicity, but **StatefulSet must be adopted for high availability** in production environments. StatefulSets provide:
+   - Stable, unique network identities for each pod
+   - Automatic Failover
+   - Data Consistency
+
+2. **Static PV/PVC with hostPath vs Dynamic Volume Provisioner**: The current implementation uses static PersistentVolume provisioning with `hostPath` backend, which requires node pinning and limits high availability. A **dynamic volume provisioner (StorageClass) would be better** for production, offering:
+   - Automatic volume creation and binding
+   - Support for cloud-native storage backends (AWS EBS, EFS, etc.)
+   - Elimination of node-specific volume constraints
+   - The mountpoint must be included in backup strategies, ensuring database persistence and disaster recovery capabilities
+
+3. **Manual Secrets vs External Secrets Operator**: Secrets were created manually using `kubectl`, which works for development but is not scalable for production. An **External Secrets Operator along with AWS Systems Manager Parameter Store or HashiCorp Vault** would be more production-ready, providing:
+   - Automated secret synchronization from external secret management systems
+   - Centralized secret rotation and lifecycle management
+   - Audit trails and compliance capabilities
+
 
 ### Kubernetes Best Practices
 
@@ -403,28 +422,14 @@ The Helm chart implements several Kubernetes best practices:
 - Application containers define resource requests (256Mi memory, 100m CPU) and limits (512Mi memory, 500m CPU) to ensure fair resource allocation and prevent resource exhaustion
 - MongoDB containers define resource requests (512Mi memory, 250m CPU) and limits (1Gi memory, 500m CPU) based on database workload requirements
 
+**ResourceQuota (Production Consideration):**
+- In production environments, **ResourceQuotas would be applied to the namespace** to enforce resource constraints at the namespace level, preventing resource exhaustion and ensuring fair resource distribution across multiple applications
+
 **Health Checks:**
 - **Liveness Probes**: Application uses HTTP GET on path `/` with 40-second initial delay to determine if the container needs to be restarted
 - **Readiness Probes**: Application uses HTTP GET with 30-second initial delay to determine when the container is ready to receive traffic
 - **MongoDB Probes**: Uses `mongosh` exec commands to ping the database, ensuring the database is alive and ready to accept connections
 
-**Security:**
-- **Pod Security Context**: Application runs as non-root user (UID 1000) with restricted capabilities (all capabilities dropped)
-- **Container Security Context**: Both application and MongoDB containers enforce non-root execution, prevent privilege escalation, and follow least privilege principles
-- **Secrets Management**: Sensitive data stored in Kubernetes Secrets
-
-**High Availability:**
-- Application deployment supports horizontal scaling with configurable replica count
-- Health probes ensure only healthy pods receive traffic during deployments and failures
-
-**Storage:**
-- MongoDB uses PersistentVolume (PV) and PersistentVolumeClaim (PVC) for data persistence, chosen for ease of implementation
-- Static PV provisioning with hostPath backend was used, though a dynamic volume provisioner (StorageClass) would be the preferred approach in production environments
-- Due to the hostPath volume limitation (volumes are node-specific), MongoDB deployment is forced to run on a specific worker node using a nodeSelector based on hostname
-- InitContainer ensures proper file permissions on persistent volumes before MongoDB starts
-- PersistentVolume configured with Retain reclaim policy to preserve data across pod deletions
-
-**Note on Storage Improvement**: There is margin for improvement in the storage configuration. Using a dynamic StorageClass would eliminate the need for node pinning, allowing MongoDB to run on any node while maintaining data persistence. This would improve high availability and make the deployment more resilient to node failures.
 
 ### Ingress Controller Installation
 
@@ -433,8 +438,9 @@ The Nginx Ingress Controller was manually installed by executing the commands de
 - Adds the official Nginx Ingress Helm repository
 - Installs the ingress controller using Helm with NodePort service type
 - Configures NodePorts 30080 (HTTP) and 30443 (HTTPS) to align with HAProxy configuration on the bastion host
+- Expose port 10254 for scraping metrics
 
-This NodePort configuration allows HAProxy on the bastion host to forward HTTP/HTTPS traffic to the ingress controller, which then routes requests to the appropriate application services based on Ingress rules. The manual installation approach provides full control over the ingress controller configuration and eliminates the need for additional AWS load balancers.
+This NodePort configuration allows HAProxy on the bastion host to forward HTTP/HTTPS  traffic to the ingress controller, which then routes requests to the appropriate application services based on Ingress rules.
 
 ## 8. Monitoring
 
@@ -451,7 +457,7 @@ This NodePort configuration allows HAProxy on the bastion host to forward HTTP/H
 
 ### Monitoring Approach: Infrastructure-Level Observability
 
-The monitoring solution was implemented using **Prometheus** and **Grafana** with a focus on **infrastructure-level observability** without requiring any application code changes. This approach aligns with DevOps best practices by leveraging existing infrastructure components and Kubernetes-native metrics collection.
+The monitoring solution was implemented using **Prometheus** and **Grafana** with a focus on **infrastructure-level observability** without requiring any application code changes.
 
 ### Architecture
 
@@ -460,7 +466,7 @@ The monitoring stack consists of:
 - **Prometheus**: Time-series database and metrics collection engine that scrapes metrics from various sources
 - **Grafana**: Visualization and dashboarding tool that queries Prometheus to display metrics
 - **Nginx Ingress Controller Metrics**: Exposes application-level HTTP metrics (request rate, latency, error rates) without application code changes
-- **Kubernetes Metrics**: Container and pod-level metrics automatically exposed by kubelet and cAdvisor
+- **Kubernetes Metrics**: Nodes, containers and pod-level metrics automatically exposed by kubelet on port 10250 on each node
 
 ### Metrics Sources
 
@@ -472,10 +478,6 @@ The Nginx Ingress Controller automatically exposes Prometheus-compatible metrics
 - **Request Latency**: `nginx_ingress_controller_request_duration_seconds` - Request duration histogram, allowing percentile calculations (p50, p95, p99)
 - **Error Rates**: `nginx_ingress_controller_requests{status=~"5.."}` and `nginx_ingress_controller_requests{status=~"4.."}` - 5xx and 4xx error rates
 
-**Advantages**:
-- No application code modifications required
-- Captures all traffic passing through ingress (complete visibility)
-- Automatic metrics collection for all routes and services
 
 #### 2. Kubernetes Container Metrics
 
@@ -503,20 +505,15 @@ A custom Grafana dashboard was created (`devops-challenge-dashboard.json`) that 
 - **Container Metrics (from Kubernetes cAdvisor)**: CPU and memory usage per pod in the production namespace
 - **Pod Status**: Pod lifecycle status across the cluster
 
-The dashboard uses standard Prometheus queries to aggregate metrics from Nginx Ingress Controller (`nginx_ingress_controller_*`) and Kubernetes container metrics (`container_*`, `kube_pod_status_phase`), all filtered by the production namespace.
-
 **Note**: The Grafana dashboard configuration has been created and deployed, but due to time constraints, the dashboard panels and queries have not been fully tested in a live environment. The queries are based on standard Prometheus metrics exposed by Nginx Ingress Controller and Kubernetes cAdvisor, and should work correctly once the monitoring stack is deployed and receiving metrics.
 
-**Installation**:
-```bash
-helm upgrade --install monitoring ./k8s-manifests/monitoring --namespace monitoring --create-namespace
-```
 
 ### Additional Monitoring Considerations
 
 While the current implementation provides comprehensive infrastructure-level observability, several additional monitoring approaches were considered but not implemented due to time constraints:
 
 - **Application Performance Monitoring (APM)**: Tools like OpenTelemetry, Jaeger, or Datadog APM could provide deeper application-level insights, including distributed tracing, transaction-level performance analysis, and code-level profiling. This would complement the infrastructure metrics by providing visibility into application internals, database query performance, and service dependencies.
+- **Prometheus Node Exporter**: Deploying these advanced node metrics on each node would enable the collection of detailed system-level metrics such as CPU load averages, disk I/O, filesystem usage, and network interface statistics. These metrics would enrich the existing cAdvisor-based data, offering a more complete view of node health and performance beyond container and pod resource utilization.
 
 These enhancements would be valuable additions for a production environment, but the current infrastructure-focused monitoring solution adequately addresses the challenge requirements while maintaining simplicity and avoiding application code modifications.
 
