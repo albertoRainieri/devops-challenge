@@ -397,10 +397,7 @@ The chart provisions the following Kubernetes resources:
 
 The current MongoDB implementation prioritizes simplicity and ease of setup for the challenge environment. However, several limitations should be addressed for production deployments:
 
-1. **Deployment vs StatefulSet**: A standard `Deployment` resource was used for simplicity, but **StatefulSet must be adopted for high availability** in production environments. StatefulSets provide:
-   - Stable, unique network identities for each pod
-   - Automatic Failover
-   - Data Consistency
+1. **Deployment vs StatefulSet**: A standard Deployment resource was used for simplicity, but a StatefulSet should be adopted for production-grade MongoDB deployments. StatefulSets provide stable, unique network identities and persistent storage for each pod, ensuring predictable pod management. While features such as automatic failover and data consistency are handled by MongoDB itself, the StatefulSet pattern provides the necessary foundation to support those database-level capabilities reliably.
 
 2. **Static PV/PVC with hostPath vs Dynamic Volume Provisioner**: The current implementation uses static PersistentVolume provisioning with `hostPath` backend, which requires node pinning and limits high availability. A **dynamic volume provisioner (StorageClass) would be better** for production, offering:
    - Automatic volume creation and binding
