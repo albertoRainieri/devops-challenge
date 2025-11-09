@@ -1,0 +1,42 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: monitoring
+  namespace: monitoring
+spec:
+  interval: 1m
+  chart:
+    spec:
+      chart: ../k8s-manifests/monitoring
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+      interval: 1m
+  releaseName: monitoring
+  targetNamespace: monitoring
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Override or extend values from values.yaml
+    prometheus:
+      enabled: true
+    grafana:
+      enabled: true
+      ingress:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: grafana.devops-challenge.local
+            paths:
+              - path: /
+                pathType: Prefix
+                servicePort: 3000
+    scrapeConfigs:
+      targetNamespace: production
+      ingressNamespace: ingress-nginx

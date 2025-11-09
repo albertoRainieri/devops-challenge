@@ -197,9 +197,9 @@ resource "aws_instance" "bastion" {
   iam_instance_profile        = aws_iam_instance_profile.bastion.name
   user_data                   = local.bastion_user_data
 
-    lifecycle {
-      prevent_destroy = true
-    }
+  lifecycle {
+    prevent_destroy = true
+  }
 
   root_block_device {
     volume_size = 8
