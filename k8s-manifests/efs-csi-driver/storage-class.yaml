@@ -1,0 +1,27 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-sc
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: efs.csi.aws.com
+parameters:
+  # EFS file system ID - replace with your actual EFS ID
+  # Get it from: terraform output efs_file_system_id
+  fileSystemId: fs-0adbee4786ba348d7
+  # Provisioning mode: efs-ap (EFS Access Point) for dynamic provisioning
+  provisioningMode: efs-ap
+  # Optional: base path for dynamic provisioning
+  basePath: /data
+  # Directory permissions (required for efs-ap mode)
+  directoryPerms: "0755"
+  # Optional: gid range for access point
+  gidRange: "1000-2000"
+  # Optional: uid for access point
+  # uid: "1000"
+  # Optional: gid for access point
+  # gid: "1000"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+

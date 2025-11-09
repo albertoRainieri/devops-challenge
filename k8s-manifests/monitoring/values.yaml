@@ -42,16 +42,16 @@ grafana:
       cpu: "500m"
   storage:
     size: "2Gi"
-    storageClass: ""  # Use emptyDir if empty
+    storageClass: "efs-sc"  # Use EFS storage class for persistent storage
   # Ingress Configuration
   ingress:
     enabled: true
     className: nginx
     annotations: {}
     hosts:
-      - host: devops-challenge.local  # Same host as app ingress
+      - host: grafana.devops-challenge  # Same host as app ingress
         paths:
-          - path: /prometheus
+          - path: /
             pathType: Prefix
             servicePort: 3000
     tls: []

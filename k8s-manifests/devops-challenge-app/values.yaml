@@ -149,7 +149,7 @@ ingress:
     # alb.ingress.kubernetes.io/target-type: ip
     # alb.ingress.kubernetes.io/scheme: internet-facing
   hosts:
-    - host: devops-challenge.local  # Update with your domain or use * for any host
+    - host: devops-challenge.dev  # Update with your domain or use * for any host
       paths:
         - path: /
           pathType: Prefix
