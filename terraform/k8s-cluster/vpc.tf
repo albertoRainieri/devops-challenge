@@ -99,6 +99,10 @@ resource "aws_eip" "nat" {
     }
   )
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   depends_on = [aws_internet_gateway.main]
 }
 

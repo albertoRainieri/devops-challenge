@@ -127,6 +127,15 @@ resource "aws_security_group" "k8s_control_plane" {
   }
 
 
+  # NFS traffic from VPC (for EFS)
+  ingress {
+    description = "NFS from VPC (EFS)"
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
   ingress {
     description = "ingress-nginx"
     from_port   = 0

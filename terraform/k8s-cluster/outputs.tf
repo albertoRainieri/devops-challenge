@@ -126,6 +126,17 @@ output "security_group_ids" {
     bastion       = aws_security_group.bastion.id
     control_plane = aws_security_group.k8s_control_plane.id
     workers       = aws_security_group.k8s_workers.id
+    efs           = aws_security_group.efs.id
   }
+}
+
+output "efs_file_system_id" {
+  description = "ID of the EFS file system"
+  value       = aws_efs_file_system.main.id
+}
+
+output "efs_dns_name" {
+  description = "DNS name of the EFS file system"
+  value       = "${aws_efs_file_system.main.id}.efs.${var.aws_region}.amazonaws.com"
 }
 
