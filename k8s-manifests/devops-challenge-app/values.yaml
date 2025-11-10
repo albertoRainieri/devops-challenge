@@ -70,7 +70,7 @@ mongodb:
     # NOTE: EFS volumes may need permission fixes depending on access point configuration
     initContainer:
       enabled: true # Set to true to enable permission fix initContainer
-      runAsRoot: true # Set to true to run as root (required for permission fixes)
+      runAsRoot: false # Set to true to run as root (required for permission fixes)
       image: busybox:1.36 # Lightweight image for permission fixes
       userId: "1000" # MongoDB user UID
       groupId: "1000" # MongoDB group GID
