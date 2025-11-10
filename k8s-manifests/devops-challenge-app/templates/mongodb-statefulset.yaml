@@ -47,7 +47,7 @@ spec:
           - -c
           - |
             echo "Fixing permissions for MongoDB data directory..."
-            chown -R {{ .Values.mongodb.persistence.initContainer.userId | default "999" }}:{{ .Values.mongodb.persistence.initContainer.groupId | default "999" }} /data/db
+            chown -R {{ .Values.mongodb.persistence.initContainer.userId | default "1000" }}:{{ .Values.mongodb.persistence.initContainer.groupId | default "1000" }} /data/db
             chmod -R {{ .Values.mongodb.persistence.initContainer.permissions | default "700" }} /data/db
             echo "Permissions fixed. Directory contents:"
             ls -la /data/db || true
@@ -57,8 +57,8 @@ spec:
           runAsGroup: 0
         {{- else }}
         securityContext:
-          runAsUser: {{ .Values.mongodb.persistence.initContainer.userId | default "999" }}
-          runAsGroup: {{ .Values.mongodb.persistence.initContainer.groupId | default "999" }}
+          runAsUser: {{ .Values.mongodb.persistence.initContainer.userId | default "1000" }}
+          runAsGroup: {{ .Values.mongodb.persistence.initContainer.groupId | default "1000" }}
           allowPrivilegeEscalation: false
         {{- end }}
         {{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
