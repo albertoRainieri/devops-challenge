@@ -48,58 +48,37 @@ mongodb:
   image:
     repository: mongo
     tag: "7.0"
-  replicas: 1
-  # Node selection - force MongoDB to run on specific worker node
-  nodeSelector:
-    kubernetes.io/hostname: ip-10-0-11-143
-  # Alternative: Use nodeAffinity for more complex scheduling rules
-  # affinity: {}
-  # Pod-level security context removed - using container-level only
-  # podSecurityContext: {}
+  replicas: 3
+  # StatefulSet configuration
+  statefulset:
+    podManagementPolicy: "OrderedReady" # OrderedReady or Parallel
+    updateStrategy:
+      type: "RollingUpdate" # RollingUpdate or OnDelete
+      rollingUpdate:
+        partition: 0 # Update pods with index >= partition (for canary updates)
+
   service:
     type: ClusterIP
     port: 27017
   persistence:
     enabled: true
     size: 10Gi
-    storageClass: "" # Use default storage class (only used if persistentVolume.enabled is false)
-    # InitContainer to fix permissions on hostPath volumes
-    # NOTE: If your cluster enforces non-root policies, set runAsRoot: false and ensure
-    # the hostPath directory is pre-created with correct permissions on the node.
-    # Alternatively, disable initContainer and rely on fsGroup (may not work for hostPath).
+    storageClass: "efs-sc" # Use EFS storage class for dynamic provisioning
+    accessModes:
+      - ReadWriteMany # EFS supports ReadWriteMany, allowing multiple pods to access the same volume
+    # InitContainer to fix permissions on EFS volumes
+    # NOTE: EFS volumes may need permission fixes depending on access point configuration
     initContainer:
-      enabled: true # Set to true to enable permission fix initContainer (requires root or pre-configured permissions)
-      runAsRoot: true # Set to true to run as root (breaks non-root policies), false to run as MongoDB user
+      enabled: true # Set to true to enable permission fix initContainer
+      runAsRoot: true # Set to true to run as root (required for permission fixes)
       image: busybox:1.36 # Lightweight image for permission fixes
       userId: "999" # MongoDB user UID
       groupId: "999" # MongoDB group GID
       permissions: "700" # Directory permissions (700 = rwx------, most secure: owner-only access)
-    # PersistentVolume configuration (static provisioning)
+    # PersistentVolume configuration (static provisioning) - DISABLED for StatefulSet
+    # StatefulSet uses volumeClaimTemplates for dynamic PVC creation per pod
     persistentVolume:
-      enabled: true # Set to true to use PV instead of StorageClass
-      # StorageClassName for PV/PVC binding (can be empty string or specific class)
-      storageClass: "" # Empty string binds to PV without StorageClass
-      # Access modes must match between PV and PVC
-      accessModes:
-        - ReadWriteOnce
-      # Reclaim policy: Retain, Recycle, or Delete
-      reclaimPolicy: Retain
-      # Storage backend type (choose one)
-      # Option 1: hostPath (for local development/testing)
-      hostPath:
-        path: /data/mongodb-data
-        type: DirectoryOrCreate
-      # Option 2: NFS (uncomment and configure if using NFS)
-      # nfs:
-      #   server: nfs-server.example.com
-      #   path: /exports/mongodb
-      # Option 3: AWS EBS (uncomment and configure if using AWS EBS volume)
-      # awsElasticBlockStore:
-      #   volumeID: vol-xxxxxxxxx
-      #   fsType: ext4
-      # Option 4: Local volume (uncomment and configure if using local volumes)
-      # local:
-      #   path: /mnt/disks/mongodb
+      enabled: false # Disabled - StatefulSet uses volumeClaimTemplates instead
   resources:
     requests:
       memory: "512Mi"

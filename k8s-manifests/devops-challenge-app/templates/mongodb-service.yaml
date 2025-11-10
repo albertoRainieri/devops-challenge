@@ -7,7 +7,8 @@ metadata:
   labels:
     {{- include "devops-challenge-app.mongodb.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.mongodb.service.type }}
+  clusterIP: None
+  type: ClusterIP
   ports:
     - port: {{ .Values.mongodb.service.port }}
       targetPort: 27017
