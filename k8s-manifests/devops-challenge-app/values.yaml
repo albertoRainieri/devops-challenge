@@ -72,8 +72,8 @@ mongodb:
       enabled: true # Set to true to enable permission fix initContainer
       runAsRoot: true # Set to true to run as root (required for permission fixes)
       image: busybox:1.36 # Lightweight image for permission fixes
-      userId: "999" # MongoDB user UID
-      groupId: "999" # MongoDB group GID
+      userId: "1000" # MongoDB user UID
+      groupId: "1000" # MongoDB group GID
       permissions: "700" # Directory permissions (700 = rwx------, most secure: owner-only access)
     # PersistentVolume configuration (static provisioning) - DISABLED for StatefulSet
     # StatefulSet uses volumeClaimTemplates for dynamic PVC creation per pod
