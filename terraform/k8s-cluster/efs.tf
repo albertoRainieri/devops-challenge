@@ -127,3 +127,9 @@ resource "aws_iam_policy" "aws_efs_csi_driver_policy" {
   })
 
 }
+
+# Attach the EFS CSI driver policy to the node IAM role
+resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
+  role       = aws_iam_role.k8s_nodes.name
+  policy_arn = aws_iam_policy.aws_efs_csi_driver_policy[0].arn
+}

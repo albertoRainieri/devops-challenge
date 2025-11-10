@@ -16,7 +16,8 @@ parameters:
   # Directory permissions (required for efs-ap mode)
   directoryPerms: "0755"
   # Optional: gid range for access point
-  gidRange: "1000-2000"
+  gidRangeStart: "1000"
+  gidRangeEnd: "2000"
   # Optional: uid for access point
   # uid: "1000"
   # Optional: gid for access point
