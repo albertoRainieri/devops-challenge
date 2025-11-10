@@ -165,7 +165,7 @@ securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: false
     runAsNonRoot: true
-    runAsUser: 999 # MongoDB runs as UID 999 in official image
+    runAsUser: 1000 # Changed to UID 1000 to match EFS access point
 
 
 
