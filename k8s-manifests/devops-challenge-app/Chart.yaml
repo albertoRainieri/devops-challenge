@@ -2,7 +2,7 @@ apiVersion: v2
 name: devops-challenge-app
 description: A Helm chart for NestJS Tech Challenge Application with MongoDB
 type: application
-version: 0.2.0
+version: 0.2.1
 appVersion: "1.0.0"
 keywords:
   - nestjs
@@ -10,6 +10,3 @@ keywords:
   - visitor-tracking
 maintainers:
   - name: DevOps Team
-
-
-

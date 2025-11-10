@@ -109,11 +109,11 @@ mongodb:
 
 # MongoDB Secrets
 mongodbSecret:
-  username: ""
-  password: ""
-  database: ""
+  username: "user-test"
+  password: "password-test"
+  database: "devops-challenge"
   # Use existing secret name instead of creating one
-  existingSecret: "devops-challenge-app-mongodb-secret"
+  existingSecret: ""
 
 # ConfigMap
 configMap:
