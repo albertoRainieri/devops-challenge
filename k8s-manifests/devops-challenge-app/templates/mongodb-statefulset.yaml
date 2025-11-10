@@ -30,6 +30,10 @@ spec:
       labels:
         {{- include "devops-challenge-app.mongodb.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.mongodb.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.mongodb.nodeSelector | nindent 8 }}
