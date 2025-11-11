@@ -109,7 +109,7 @@ mongodb:
 
 # MongoDB Secrets
 mongodbSecret:
-  instanceName: "mongodb"
+  instanceName: "mongodb.production.svc.cluster.local"
   username: "user-test"
   password: "password-test"
   database: "devops-challenge"
