@@ -9,8 +9,8 @@ metadata:
 data:
   NODE_ENV: {{ .Values.app.env.NODE_ENV | quote }}
   PORT: {{ .Values.app.env.PORT | quote }}
-  MONGO_INSTANCE_NAME: mongodb
-  MONGO_HOST: mongodb
+  MONGO_INSTANCE_NAME: mongodb-0.mongodb
+  MONGO_HOST: mongo-0.mongodb
   MONGO_PORT: "27017"
 {{- end }}
 

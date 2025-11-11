@@ -109,9 +109,9 @@ mongodb:
 
 # MongoDB Secrets
 mongodbSecret:
-  instanceName: "mongodb.production.svc.cluster.local"
-  username: "user-test"
-  password: "password-test"
+  instanceName: "mongo-0.mongodb.production.svc.cluster.local"
+  username: "root"
+  password: "mypassword"
   database: "devops-challenge"
   # Use existing secret name instead of creating one
   existingSecret: ""
